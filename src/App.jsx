@@ -330,7 +330,11 @@ export default function App() {
   }
 
   function openAdd() {
-    setEditItem({id:null, name:'', qty:1, price:'', store:'', url:'', medidas:'', status:'necesito', priority:'media', notes:'', category:'', delivery:'', imageUrl:''});
+    // Pick the first existing category in this room as default
+    const defaultCat = (room?.items||[]).reduce((acc, it) => {
+      if (!acc && it.category) return it.category; return acc;
+    }, '') || 'General';
+    setEditItem({id:null, name:'', qty:1, price:'', store:'', url:'', medidas:'', status:'necesito', priority:'media', notes:'', category:defaultCat, delivery:'', imageUrl:''});
     setView('form');
   }
 
@@ -443,7 +447,7 @@ export default function App() {
       {boardMode ? (
         <BoardView rooms={rooms} onCycle={cycleStatus} onEdit={it=>{setRoomId(it.roomId);setEditItem({...it});setView('form');setBoardMode(false);}}/>
       ) : view==='form' && editItem ? (
-        <ItemForm item={editItem} roomName={room?.name} onSave={saveItem} onDelete={delItem} onCancel={()=>{setView('list');setEditItem(null);}}/>
+        <ItemForm item={editItem} roomName={room?.name} roomItems={room?.items||[]} onSave={saveItem} onDelete={delItem} onCancel={()=>{setView('list');setEditItem(null);}}/>
       ) : (
         <RoomView room={room} items={items} filt={filt} q={q}
           onFilt={setFilt} onQ={setQ} onAdd={openAdd}
@@ -635,9 +639,21 @@ function ItemRow({ item, onEdit, onCycle }) {
 // ── ITEM FORM ─────────────────────────────────────────────────────────────
 const LBL = {fontFamily:SANS, fontSize:'11px', fontWeight:500, color:C.inkMid, display:'block', marginBottom:'5px', textTransform:'uppercase', letterSpacing:'0.05em'};
 
-function ItemForm({ item, roomName, onSave, onDelete, onCancel }) {
+function ItemForm({ item, roomName, roomItems, onSave, onDelete, onCancel }) {
   const [f, setF] = useState({...item});
   const set = (k,v) => setF(p=>({...p,[k]:v}));
+  const [newCat, setNewCat] = useState('');
+
+  // Unique categories from this room, preserving order of first appearance
+  const existingCats = useMemo(() => {
+    const seen = new Set();
+    const cats = [];
+    (roomItems||[]).forEach(it => {
+      const cat = it.category || 'General';
+      if (!seen.has(cat)) { seen.add(cat); cats.push(cat); }
+    });
+    return cats;
+  }, [roomItems]);
   const cost = (parseFloat(f.price)||0)*(parseInt(f.qty)||1);
 
   return (
@@ -731,6 +747,35 @@ function ItemForm({ item, roomName, onSave, onDelete, onCancel }) {
             </div>
           </div>
 
+          {/* Category */}
+          <div>
+            <label style={LBL}>Categoría</label>
+            {f.category === '__nueva__' ? (
+              <div style={{display:'flex', gap:'8px'}}>
+                <input
+                  value={newCat}
+                  onChange={e=>setNewCat(e.target.value)}
+                  placeholder="Nombre de la nueva categoría…"
+                  style={{flex:1}}
+                  autoFocus
+                />
+                <button
+                  onClick={()=>{ if(newCat.trim()){ set('category', newCat.trim()); setNewCat(''); } }}
+                  style={{padding:'8px 14px', background:C.terra, color:'#fff', border:'none', borderRadius:'8px', fontFamily:SANS, fontSize:'12px', fontWeight:500, flexShrink:0}}
+                >OK</button>
+                <button
+                  onClick={()=>set('category', existingCats[0]||'General')}
+                  style={{padding:'8px 10px', background:'none', border:`1px solid ${C.border}`, borderRadius:'8px', fontFamily:SANS, fontSize:'12px', color:C.inkMid, flexShrink:0}}
+                >✕</button>
+              </div>
+            ) : (
+              <select value={f.category||existingCats[0]||'General'} onChange={e=>set('category', e.target.value)}>
+                {existingCats.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                <option value="__nueva__">+ Nueva categoría…</option>
+              </select>
+            )}
+          </div>
+
           {/* Notes */}
           <div>
             <label style={LBL}>Notas</label>
@@ -741,7 +786,11 @@ function ItemForm({ item, roomName, onSave, onDelete, onCancel }) {
 
           {/* Actions */}
           <div style={{display:'flex', gap:'8px', paddingTop:'4px'}}>
-            <button onClick={()=>{if(f.name.trim()) onSave({...f,qty:parseInt(f.qty)||1});}} style={{
+            <button onClick={()=>{
+              if(!f.name.trim()) return;
+              const finalCat = (f.category==='__nueva__'||!f.category) ? (existingCats[0]||'General') : f.category;
+              onSave({...f, qty:parseInt(f.qty)||1, category:finalCat});
+            }} style={{
               flex:1, padding:'11px', fontFamily:SANS, fontWeight:500, fontSize:'14px',
               background:C.terra, color:'#fff', border:'none', borderRadius:'10px',
             }}>
