@@ -2,36 +2,93 @@ import { useState, useEffect, useMemo } from "react";
 
 const genId = () => Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-4);
 
-const PALETTE = {
-  amber:  { bg:'#FAEEDA', border:'#EF9F27', text:'#854F0B' },
-  blue:   { bg:'#E6F1FB', border:'#378ADD', text:'#185FA5' },
-  teal:   { bg:'#E1F5EE', border:'#1D9E75', text:'#0F6E56' },
-  gray:   { bg:'#F1EFE8', border:'#B4B2A9', text:'#5F5E5A' },
-  coral:  { bg:'#FAECE7', border:'#D85A30', text:'#993C1D' },
-};
-const STATUS = {
-  necesito: { label:'Falta',  short:'Falta',  ...PALETTE.amber, icon:'ring'  },
-  comprado: { label:'Listo',  short:'Listo', ...PALETTE.blue,  icon:'arrow' },
-  tengo:    { label:'Tengo',  short:'Tengo',  ...PALETTE.teal,  icon:'check' },
-  quizas:   { label:'Quizás', short:'Quizás', ...PALETTE.gray,  icon:'maybe' },
-};
-const PRIORITY = {
-  alta:  { label:'Alta',  bars:3, ...PALETTE.coral },
-  media: { label:'Media', bars:2, ...PALETTE.amber },
-  baja:  { label:'Baja',  bars:1, ...PALETTE.gray  },
+// ── Inject Google Fonts once ──────────────────────────────────────────────
+const _link = document.createElement('link');
+_link.rel = 'stylesheet';
+_link.href = 'https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap';
+document.head.appendChild(_link);
+
+// ── Global styles ─────────────────────────────────────────────────────────
+const _style = document.createElement('style');
+_style.textContent = `
+  * { box-sizing: border-box; }
+  body { background: #F0EAD8; margin: 0; }
+  input, select, textarea, button {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    outline: none;
+  }
+  input, select, textarea {
+    background: #FAF7F2;
+    border: 1px solid #D4CBBB;
+    border-radius: 8px;
+    padding: 8px 11px;
+    color: #2C2B1F;
+    width: 100%;
+    transition: border-color 0.15s;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: #B5614A;
+  }
+  button {
+    cursor: pointer;
+  }
+  ::-webkit-scrollbar { width: 0; height: 0; }
+`;
+document.head.appendChild(_style);
+
+// ── Design tokens ──────────────────────────────────────────────────────────
+const C = {
+  cream:      '#F0EAD8',
+  surface:    '#FAF7F2',
+  surfaceAlt: '#F5F0E8',
+  terra:      '#B5614A',
+  terraBg:    '#F5E5DE',
+  terraDark:  '#8A4535',
+  sage:       '#7A9E99',
+  sageBg:     '#E4EDEB',
+  sageDark:   '#4E7A76',
+  gold:       '#B89A4A',
+  goldBg:     '#F5EDD5',
+  goldDark:   '#8A7030',
+  meadow:     '#7A9060',
+  meadowBg:   '#E8EFE0',
+  meadowDark: '#4E6A3C',
+  ink:        '#2C2B1F',
+  inkMid:     '#6B6455',
+  inkLight:   '#A09880',
+  border:     '#D4CBBB',
+  borderLight:'#E8E0D0',
+  olive:      '#6F6C43',
 };
 
-function StatusIcon({ type, color, size=14 }) {
+const SERIF = "'Playfair Display', Georgia, serif";
+const SANS  = "'DM Sans', system-ui, sans-serif";
+
+// ── Status & Priority ─────────────────────────────────────────────────────
+const STATUS = {
+  necesito: { label:'Falta',  short:'Falta',  bg:C.terraBg,  border:C.terra,   text:C.terraDark,  icon:'ring'  },
+  comprado: { label:'Listo',  short:'Listo',  bg:C.sageBg,   border:C.sage,    text:C.sageDark,   icon:'arrow' },
+  tengo:    { label:'Tengo',  short:'Tengo',  bg:C.meadowBg, border:C.meadow,  text:C.meadowDark, icon:'check' },
+  quizas:   { label:'Quizás', short:'Quizás', bg:C.goldBg,   border:C.gold,    text:C.goldDark,   icon:'maybe' },
+};
+const PRIORITY = {
+  alta:  { label:'Alta',  bars:3, color:C.terra  },
+  media: { label:'Media', bars:2, color:C.gold   },
+  baja:  { label:'Baja',  bars:1, color:C.meadow },
+};
+
+function StatusIcon({ type, color, size=13 }) {
   const s = { width:size, height:size, display:'block', flexShrink:0 };
   if (type==='ring') return (
     <svg style={s} viewBox="0 0 14 14" fill="none">
-      <circle cx="7" cy="7" r="5.5" stroke={color} strokeWidth="1.5" strokeDasharray="2.8 1.6"/>
+      <circle cx="7" cy="7" r="5.5" stroke={color} strokeWidth="1.6" strokeDasharray="2.6 1.8"/>
     </svg>
   );
   if (type==='arrow') return (
     <svg style={s} viewBox="0 0 14 14" fill="none">
-      <circle cx="7" cy="7" r="6" fill={color} opacity="0.18"/>
-      <path d="M4 7.2l2 2L10 4.8" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      <circle cx="7" cy="7" r="6" fill={color} opacity="0.2"/>
+      <path d="M4 7.2l2 2L10 4.8" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   );
   if (type==='check') return (
@@ -42,39 +99,25 @@ function StatusIcon({ type, color, size=14 }) {
   );
   return (
     <svg style={s} viewBox="0 0 14 14" fill="none">
-      <circle cx="7" cy="7" r="5.5" stroke={color} strokeWidth="1" opacity="0.6"/>
-      <text x="7" y="10.2" textAnchor="middle" fontSize="7.5" fill={color} opacity="0.7">?</text>
+      <circle cx="7" cy="7" r="5.5" stroke={color} strokeWidth="1" opacity="0.5"/>
+      <text x="7" y="10.5" textAnchor="middle" fontSize="7" fill={color}>?</text>
     </svg>
   );
 }
 
-function PriorityBars({ priority }) {
-  const p = PRIORITY[priority] || PRIORITY.media;
+
+
+function MiniProgress({ pct }) {
   return (
-    <div title={p.label} style={{display:'flex', gap:'2px', alignItems:'flex-end', flexShrink:0}}>
-      {[1,2,3].map(i => (
-        <div key={i} style={{
-          width:'3px', height:i===1?'6px':i===2?'9px':'12px',
-          borderRadius:'2px',
-          background: i<=p.bars ? p.border : '#D3D1C7',
-        }}/>
-      ))}
+    <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+      <div style={{flex:1, height:'3px', background:C.borderLight, borderRadius:'2px', overflow:'hidden'}}>
+        <div style={{height:'100%', width:`${pct}%`, background:C.meadow, borderRadius:'2px', transition:'width 0.5s'}}/>
+      </div>
+      <span style={{fontSize:'11px', fontFamily:SANS, color:C.inkMid, flexShrink:0}}>{pct}%</span>
     </div>
   );
 }
 
-function MiniArc({ pct, size=28 }) {
-  const r=10, c=size/2, circ=2*Math.PI*r;
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{flexShrink:0}}>
-      <circle cx={c} cy={c} r={r} fill="none" stroke="#D3D1C7" strokeWidth="2"/>
-      <circle cx={c} cy={c} r={r} fill="none" stroke="#1D9E75" strokeWidth="2"
-        strokeDasharray={`${circ*pct/100} ${circ}`} strokeLinecap="round"
-        transform={`rotate(-90 ${c} ${c})`}/>
-      <text x={c} y={c+3.5} textAnchor="middle" fontSize="7" fill="#5F5E5A" fontWeight="500">{pct}%</text>
-    </svg>
-  );
-}
 const CYCLE = ['necesito','comprado','tengo','quizas'];
 
 const ROOMS0 = [
@@ -233,8 +276,8 @@ const ROOMS0 = [
   ]},
 ];
 
-const LBL = {fontSize:'11px', color:'#6B6963', display:'block', marginBottom:'4px'};
 
+// ── App ───────────────────────────────────────────────────────────────────
 export default function App() {
   const [rooms, setRooms] = useState(null);
   const [roomId, setRoomId] = useState(ROOMS0[0].id);
@@ -243,21 +286,16 @@ export default function App() {
   const [filt, setFilt] = useState('all');
   const [q, setQ] = useState('');
   const [boardMode, setBoardMode] = useState(false);
-  const [modal, setModal] = useState(null); // null | 'export' | 'import'
-  const [importText, setImportText] = useState('');
-  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const r = await Promise.resolve({value: localStorage.getItem('d504-v6')});
-        setRooms(r?.value ? JSON.parse(r.value) : ROOMS0);
-      } catch { setRooms(ROOMS0); }
-    })();
+    try {
+      const saved = localStorage.getItem('d504-v7');
+      setRooms(saved ? JSON.parse(saved) : ROOMS0);
+    } catch { setRooms(ROOMS0); }
   }, []);
 
   useEffect(() => {
-    if (rooms) { try { localStorage.setItem('d504-v6', JSON.stringify(rooms)); } catch(e) {} }
+    if (rooms) try { localStorage.setItem('d504-v7', JSON.stringify(rooms)); } catch(e) {}
   }, [rooms]);
 
   const room = useMemo(() => rooms?.find(r => r.id === roomId), [rooms, roomId]);
@@ -275,7 +313,7 @@ export default function App() {
     let total=0, done=0, budget=0, spent=0;
     rooms.forEach(r => r.items.forEach(it => {
       total++;
-      const cost = (parseFloat(it.price)||0) * (parseInt(it.qty)||1);
+      const cost = (parseFloat(it.price)||0)*(parseInt(it.qty)||1);
       if (it.status==='tengo'||it.status==='comprado') { done++; spent+=cost; }
       else budget+=cost;
     }));
@@ -283,29 +321,6 @@ export default function App() {
   }, [rooms]);
 
   function nav(id) { setRoomId(id); setView('list'); setEditItem(null); setFilt('all'); setQ(''); }
-
-  function exportData() { setImportText(''); setModal('export'); setCopied(false); }
-
-  function handleCopy() {
-    const json = JSON.stringify(rooms, null, 2);
-    if (navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(json).then(() => { setCopied(true); setTimeout(()=>setCopied(false), 2500); });
-    } else {
-      const ta = document.getElementById('export-ta');
-      if (ta) { ta.select(); document.execCommand('copy'); setCopied(true); setTimeout(()=>setCopied(false), 2500); }
-    }
-  }
-
-  function handleImport() {
-    try {
-      const parsed = JSON.parse(importText.trim());
-      if (Array.isArray(parsed) && parsed[0]?.items) {
-        setRooms(parsed);
-        try { localStorage.setItem('d504-v6', JSON.stringify(parsed)); } catch(e) {}
-        setModal(null); setImportText('');
-      } else { alert('El texto no parece un inventario válido.'); }
-    } catch { alert('JSON inválido — asegúrate de pegar el texto completo.'); }
-  }
 
   function cycleStatus(itemId) {
     setRooms(prev => prev.map(r => ({
@@ -315,7 +330,7 @@ export default function App() {
   }
 
   function openAdd() {
-    setEditItem({id:null, name:'', qty:1, price:'', store:'', url:'', status:'necesito', priority:'alta', notes:'', category:'', delivery:''});
+    setEditItem({id:null, name:'', qty:1, price:'', store:'', url:'', medidas:'', status:'necesito', priority:'media', notes:'', category:'', delivery:'', imageUrl:''});
     setView('form');
   }
 
@@ -333,81 +348,70 @@ export default function App() {
     setView('list'); setEditItem(null);
   }
 
-  if (!rooms) return <div style={{padding:'2rem', color:'#6B6963', fontSize:'14px'}}>Cargando inventario…</div>;
+
+
+  if (!rooms) return (
+    <div style={{display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:C.cream, fontFamily:SERIF, color:C.inkMid, fontSize:'16px', fontStyle:'italic'}}>
+      Cargando inventario…
+    </div>
+  );
 
   const fmt = n => n ? `$${Math.round(n).toLocaleString('es-CL')}` : '—';
-  const STAT_CARDS = [
-    { l:'Progreso',   v:`${stats.pct}%`,          accent:'#1D9E75', lightBg:'#E1F5EE' },
-    { l:'Listos',     v:`${stats.done}`,           accent:'#185FA5', lightBg:'#E6F1FB' },
-    { l:'Por gastar', v:fmt(stats.budget),         accent:'#BA7517', lightBg:'#FAEEDA' },
-    { l:'Gastado',    v:fmt(stats.spent),          accent:'#D85A30', lightBg:'#FAECE7' },
-  ];
 
   return (
-    <div style={{fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif'}}>
-      {/* ─── HEADER ─── */}
-      <div style={{padding:'1.25rem 1.25rem 1rem', borderBottom:'0.5px solid #E2DFD8'}}>
-        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'1rem'}}>
+    <div style={{fontFamily:SANS, background:C.cream, minHeight:'100vh', color:C.ink}}>
+
+      {/* ── HEADER ── */}
+      <div style={{background:C.surface, borderBottom:`1px solid ${C.border}`, padding:'1.5rem 1.5rem 1rem'}}>
+        <div style={{display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'1.25rem'}}>
           <div>
-            <div style={{fontSize:'17px', fontWeight:500, letterSpacing:'-0.01em'}}>Depto 504</div>
-            <div style={{fontSize:'11px', color:'#9B9891', marginTop:'1px'}}>Jardín del Este · Inventario mudanza</div>
+            <h1 style={{fontFamily:SERIF, fontSize:'26px', fontWeight:500, margin:'0 0 2px', letterSpacing:'-0.01em', color:C.ink}}>
+              Depto 504
+            </h1>
+            <p style={{fontFamily:SANS, fontSize:'12px', color:C.inkLight, margin:0, letterSpacing:'0.04em', textTransform:'uppercase'}}>
+              Jardín del Este · Inventario mudanza
+            </p>
           </div>
-          <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
-            <MiniArc pct={stats.pct} size={36}/>
-            <button onClick={()=>setBoardMode(b=>!b)} style={{
-              display:'flex', alignItems:'center', gap:'5px', padding:'5px 11px',
-              borderRadius:'8px', cursor:'pointer', fontSize:'11px', fontWeight:500,
-              border: boardMode ? '1.5px solid #1D9E75' : '1.5px solid #E2DFD8',
-              background: boardMode ? '#E1F5EE' : 'none',
-              color: boardMode ? '#0F6E56' : '#6B6963',
-            }}>
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style={{flexShrink:0}}>
-                <rect x="0.5" y="0.5" width="4.5" height="7" rx="1" stroke="currentColor" strokeWidth="1.1"/>
-                <rect x="7.5" y="0.5" width="4.5" height="4.5" rx="1" stroke="currentColor" strokeWidth="1.1"/>
-                <rect x="7.5" y="7.5" width="4.5" height="4.5" rx="1" stroke="currentColor" strokeWidth="1.1"/>
-                <rect x="0.5" y="10" width="4.5" height="2" rx="1" stroke="currentColor" strokeWidth="1.1"/>
+          <div style={{display:'flex', gap:'6px', flexWrap:'wrap', justifyContent:'flex-end'}}>
+            <HeaderBtn onClick={()=>setBoardMode(b=>!b)} active={boardMode} label={boardMode?'← Lista':'Tablero'} icon={
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <rect x="0.5" y="0.5" width="4" height="6.5" rx="1" stroke="currentColor" strokeWidth="1.1"/>
+                <rect x="7" y="0.5" width="4" height="3.5" rx="1" stroke="currentColor" strokeWidth="1.1"/>
+                <rect x="7" y="7" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="1.1"/>
               </svg>
-              {boardMode ? 'Lista' : 'Tablero'}
-            </button>
-            <button onClick={exportData} style={{
-              display:'flex', alignItems:'center', gap:'4px', padding:'5px 11px',
-              borderRadius:'8px', cursor:'pointer', fontSize:'11px', fontWeight:500,
-              border:'1.5px solid #E2DFD8', background:'none',
-              color:'#6B6963',
-            }}>
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{flexShrink:0}}>
-                <path d="M6 1v7M3.5 5.5L6 8l2.5-2.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M1 10h10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-              </svg>
-              Exportar
-            </button>
-            <button onClick={()=>{setImportText(''); setModal('import');}} style={{
-              display:'flex', alignItems:'center', gap:'4px', padding:'5px 11px',
-              borderRadius:'8px', cursor:'pointer', fontSize:'11px', fontWeight:500,
-              border:'1.5px solid #E2DFD8', background:'none',
-              color:'#6B6963',
-            }}>
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{flexShrink:0}}>
-                <path d="M6 8V1M3.5 3.5L6 1l2.5 2.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M1 10h10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-              </svg>
-              Importar
-            </button>
+            }/>
+
           </div>
         </div>
-        <div style={{display:'grid', gridTemplateColumns:'repeat(4,minmax(0,1fr))', gap:'6px'}}>
-          {STAT_CARDS.map(({l,v,accent,lightBg}) => (
-            <div key={l} style={{borderRadius:'8px', padding:'0.625rem 0.75rem', background:lightBg, borderLeft:`2.5px solid ${accent}`}}>
-              <div style={{fontSize:'9px', color:accent, fontWeight:500, marginBottom:'2px', textTransform:'uppercase', letterSpacing:'0.05em'}}>{l}</div>
-              <div style={{fontSize:'15px', fontWeight:500, color:'#1A1916'}}>{v}</div>
+
+        {/* Stats row */}
+        <div style={{display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'6px', marginBottom:'1rem'}}>
+          {[
+            {l:'Progreso',   v:`${stats.pct}%`,    accent:C.meadow,  bg:C.meadowBg},
+            {l:'Listos',     v:`${stats.done}`,     accent:C.sage,    bg:C.sageBg},
+            {l:'Por gastar', v:fmt(stats.budget),   accent:C.terra,   bg:C.terraBg},
+            {l:'Gastado',    v:fmt(stats.spent),    accent:C.gold,    bg:C.goldBg},
+          ].map(({l,v,accent,bg}) => (
+            <div key={l} style={{background:bg, borderRadius:'10px', padding:'10px 12px', borderTop:`2px solid ${accent}`}}>
+              <div style={{
+                fontFamily:SANS, fontSize:'9px', fontWeight:500, color:accent,
+                textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:'5px',
+              }}>{l}</div>
+              <div style={{
+                fontFamily:SANS, fontSize:'18px', fontWeight:300, color:C.ink,
+                letterSpacing:'-0.02em', lineHeight:1,
+              }}>{v}</div>
             </div>
           ))}
         </div>
+
+        {/* Overall progress bar */}
+        <MiniProgress pct={stats.pct}/>
       </div>
 
-      {/* ─── ROOM TABS (hidden in board mode) ─── */}
+      {/* ── ROOM TABS ── */}
       {!boardMode && (
-        <div style={{display:'flex', overflowX:'auto', borderBottom:'0.5px solid #E2DFD8', scrollbarWidth:'none', paddingBottom:'0'}}>
+        <div style={{background:C.surface, borderBottom:`1px solid ${C.border}`, display:'flex', overflowX:'auto'}}>
           {rooms.map(r => {
             const done = r.items.filter(it=>it.status==='tengo'||it.status==='comprado').length;
             const pct = r.items.length ? Math.round(done/r.items.length*100) : 0;
@@ -415,18 +419,18 @@ export default function App() {
             return (
               <button key={r.id} onClick={()=>nav(r.id)} style={{
                 display:'flex', flexDirection:'column', alignItems:'center', gap:'3px',
-                padding:'0.625rem 0.875rem', border:'none', cursor:'pointer', flexShrink:0,
-                background: active ? '#FAEEDA' : 'none',
-                borderBottom: active ? '2px solid #BA7517' : '2px solid transparent',
-                borderTop: 'none', borderLeft:'none', borderRight:'none',
+                padding:'10px 14px', border:'none', background:'none', cursor:'pointer', flexShrink:0,
+                borderBottom: active ? `2px solid ${C.terra}` : '2px solid transparent',
               }}>
-                <span style={{fontSize:'14px', lineHeight:'1'}}>{r.emoji}</span>
-                <span style={{fontSize:'10px', fontWeight:active?500:400, whiteSpace:'nowrap', color: active ? '#854F0B' : '#6B6963'}}>
-                  {r.name.replace('Dorm.','Dorm')}
-                </span>
-                <div style={{display:'flex', gap:'1.5px'}}>
-                  {r.items.slice(0,5).map((_,i)=>(
-                    <div key={i} style={{width:'4px',height:'4px',borderRadius:'50%',background: i<Math.round(pct/100*Math.min(r.items.length,5)) ? '#1D9E75' : '#D3D1C7'}}/>
+                <span style={{fontSize:'15px'}}>{r.emoji}</span>
+                <span style={{
+                  fontSize:'10px', fontWeight:active?500:400, whiteSpace:'nowrap',
+                  fontFamily:SANS,
+                  color: active ? C.terra : C.inkMid,
+                }}>{r.name}</span>
+                <div style={{display:'flex', gap:'2px'}}>
+                  {[...Array(Math.min(r.items.length,5))].map((_,i) => (
+                    <div key={i} style={{width:'4px',height:'4px',borderRadius:'50%', background: i < Math.round(pct/100*Math.min(r.items.length,5)) ? C.meadow : C.borderLight}}/>
                   ))}
                 </div>
               </button>
@@ -435,11 +439,11 @@ export default function App() {
         </div>
       )}
 
-      {/* ─── CONTENT ─── */}
+      {/* ── CONTENT ── */}
       {boardMode ? (
-        <BoardView rooms={rooms} onCycle={cycleStatus} onEdit={it => { setRoomId(it.roomId); setEditItem({...it}); setView('form'); setBoardMode(false); }}/>
+        <BoardView rooms={rooms} onCycle={cycleStatus} onEdit={it=>{setRoomId(it.roomId);setEditItem({...it});setView('form');setBoardMode(false);}}/>
       ) : view==='form' && editItem ? (
-        <ItemForm item={editItem} roomName={room?.name} onSave={saveItem} onDelete={delItem} onCancel={()=>{setView('list');setEditItem(null);}} />
+        <ItemForm item={editItem} roomName={room?.name} onSave={saveItem} onDelete={delItem} onCancel={()=>{setView('list');setEditItem(null);}}/>
       ) : (
         <RoomView room={room} items={items} filt={filt} q={q}
           onFilt={setFilt} onQ={setQ} onAdd={openAdd}
@@ -448,73 +452,36 @@ export default function App() {
         />
       )}
 
-      {/* ─── MODALS ─── */}
-      {modal && (
-        <div onClick={()=>setModal(null)} style={{
-          position:'fixed', inset:0, background:'rgba(0,0,0,0.45)',
-          display:'flex', alignItems:'center', justifyContent:'center', zIndex:100, padding:'1.5rem',
-        }}>
-          <div onClick={e=>e.stopPropagation()} style={{
-            background:'#FFFFFF',
-            borderRadius:'12px', padding:'1.5rem', width:'100%', maxWidth:'480px',
-            boxShadow:'0 8px 40px rgba(0,0,0,0.18)', display:'flex', flexDirection:'column', gap:'12px',
-          }}>
-            {modal === 'export' ? (<>
-              <div style={{fontWeight:500, fontSize:'15px'}}>📋 Exportar inventario</div>
-              <div style={{fontSize:'12px', color:'#6B6963', lineHeight:'1.5'}}>
-                Copia todo el texto de abajo y guárdalo en un archivo de notas, documento o donde prefieras. La próxima vez usa <strong>Importar</strong> para restaurarlo.
-              </div>
-              <textarea id="export-ta" readOnly value={JSON.stringify(rooms, null, 2)}
-                style={{width:'100%', boxSizing:'border-box', height:'180px', fontSize:'10px',
-                  fontFamily:'monospace', resize:'none', borderRadius:'8px',
-                  border:'1px solid #E2DFD8', padding:'8px', color:'#6B6963'}}/>
-              <div style={{display:'flex', gap:'8px'}}>
-                <button onClick={handleCopy} style={{
-                  flex:1, padding:'9px', fontWeight:500, fontSize:'13px', cursor:'pointer',
-                  background: copied ? '#E1F5EE' : '#1A1916',
-                  color: copied ? '#0F6E56' : '#FFFFFF',
-                  border: copied ? '1.5px solid #1D9E75' : 'none',
-                  borderRadius:'8px',
-                }}>
-                  {copied ? '✓ Copiado!' : 'Copiar al portapapeles'}
-                </button>
-                <button onClick={()=>setModal(null)} style={{padding:'9px 16px', fontSize:'13px', cursor:'pointer', borderRadius:'8px', border:'1px solid #E2DFD8', background:'none'}}>Cerrar</button>
-              </div>
-            </>) : (<>
-              <div style={{fontWeight:500, fontSize:'15px'}}>📂 Importar inventario</div>
-              <div style={{fontSize:'12px', color:'#6B6963', lineHeight:'1.5'}}>
-                Pega acá el texto que copiaste antes con <strong>Exportar</strong>. Esto reemplazará el inventario actual.
-              </div>
-              <textarea value={importText} onChange={e=>setImportText(e.target.value)}
-                placeholder='Pega el JSON aquí…'
-                style={{width:'100%', boxSizing:'border-box', height:'180px', fontSize:'10px',
-                  fontFamily:'monospace', resize:'none', borderRadius:'8px',
-                  border:'1px solid #E2DFD8', padding:'8px'}}/>
-              <div style={{display:'flex', gap:'8px'}}>
-                <button onClick={handleImport} disabled={!importText.trim()} style={{
-                  flex:1, padding:'9px', fontWeight:500, fontSize:'13px', cursor:'pointer',
-                  background:'#1A1916', color:'#FFFFFF',
-                  border:'none', borderRadius:'8px',
-                  opacity: importText.trim() ? 1 : 0.4,
-                }}>Cargar inventario</button>
-                <button onClick={()=>setModal(null)} style={{padding:'9px 16px', fontSize:'13px', cursor:'pointer', borderRadius:'8px', border:'1px solid #E2DFD8', background:'none'}}>Cancelar</button>
-              </div>
-            </>)}
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }
 
+function HeaderBtn({ onClick, label, icon, active }) {
+  return (
+    <button onClick={onClick} style={{
+      display:'flex', alignItems:'center', gap:'5px',
+      padding:'6px 12px', borderRadius:'8px', fontFamily:SANS,
+      fontSize:'11px', fontWeight:500,
+      border: active ? `1.5px solid ${C.meadow}` : `1px solid ${C.border}`,
+      background: active ? C.meadowBg : C.surface,
+      color: active ? C.meadowDark : C.inkMid,
+    }}>
+      {icon}{label}
+    </button>
+  );
+}
+
+// ── FILTER OPTIONS ────────────────────────────────────────────────────────
 const FILTER_OPTS = [
-  { k:'all',      l:'Todo',    icon:null },
-  { k:'necesito', l:'Falta',   ...STATUS.necesito },
-  { k:'comprado', l:'Pedido',  ...STATUS.comprado },
-  { k:'tengo',    l:'Tengo',   ...STATUS.tengo    },
-  { k:'quizas',   l:'Quizás',  ...STATUS.quizas   },
+  {k:'all',      l:'Todo'},
+  {k:'necesito', l:'Falta',  ...STATUS.necesito},
+  {k:'comprado', l:'Listo',  ...STATUS.comprado},
+  {k:'tengo',    l:'Tengo',  ...STATUS.tengo},
+  {k:'quizas',   l:'Quizás', ...STATUS.quizas},
 ];
 
+// ── ROOM VIEW ─────────────────────────────────────────────────────────────
 function RoomView({ room, items, filt, q, onFilt, onQ, onAdd, onEdit, onCycle }) {
   if (!room) return null;
   const done = room.items.filter(it=>it.status==='tengo'||it.status==='comprado').length;
@@ -524,42 +491,52 @@ function RoomView({ room, items, filt, q, onFilt, onQ, onAdd, onEdit, onCycle })
     if (q) return null;
     const g = {};
     items.forEach(it => {
-      const c = it.category || 'Sin categoría';
-      if (!g[c]) g[c] = [];
-      g[c].push(it);
+      const cat = it.category || 'General';
+      if (!g[cat]) g[cat] = [];
+      g[cat].push(it);
     });
     return g;
   }, [items, q]);
 
   return (
-    <div style={{padding:'1rem 1.25rem'}}>
-      <div style={{display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'0.875rem'}}>
+    <div style={{padding:'1.25rem 1.5rem'}}>
+      {/* Room header */}
+      <div style={{display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'1rem'}}>
         <div>
-          <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
-            <span style={{fontSize:'18px'}}>{room.emoji}</span>
-            <span style={{fontSize:'15px', fontWeight:500}}>{room.name}</span>
-            <span style={{fontSize:'11px', padding:'1px 7px', borderRadius:'10px', background:'#E1F5EE', color:'#0F6E56', fontWeight:500}}>{pct}%</span>
+          <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+            <span style={{fontSize:'20px'}}>{room.emoji}</span>
+            <h2 style={{fontFamily:SERIF, fontSize:'20px', fontWeight:500, margin:0, color:C.ink}}>{room.name}</h2>
+            <span style={{
+              fontSize:'10px', padding:'2px 8px', borderRadius:'10px',
+              background:C.meadowBg, color:C.meadowDark, fontWeight:500, fontFamily:SANS,
+            }}>{pct}%</span>
           </div>
-          <div style={{fontSize:'11px', color:'#6B6963', marginTop:'3px', paddingLeft:'26px'}}>{room.desc}</div>
+          <p style={{fontFamily:SANS, fontSize:'11px', color:C.inkLight, margin:'3px 0 0 30px'}}>{room.desc}</p>
         </div>
-        <button onClick={onAdd} style={{fontSize:'12px', padding:'5px 12px', flexShrink:0, background:'#FAEEDA', color:'#854F0B', border:'none', borderRadius:'8px', cursor:'pointer', fontWeight:500}}>+ ítem</button>
+        <button onClick={onAdd} style={{
+          padding:'7px 14px', background:C.terra, color:'#fff',
+          border:'none', borderRadius:'8px', fontFamily:SANS, fontSize:'12px', fontWeight:500,
+          flexShrink:0,
+        }}>+ Agregar</button>
       </div>
 
+      {/* Search */}
       <input type="text" value={q} onChange={e=>onQ(e.target.value)}
         placeholder="Buscar en este espacio…"
-        style={{width:'100%', boxSizing:'border-box', marginBottom:'10px', fontSize:'12px', height:'30px'}} />
+        style={{marginBottom:'10px'}}/>
 
-      <div style={{display:'flex', gap:'5px', marginBottom:'1rem', flexWrap:'wrap'}}>
-        {FILTER_OPTS.map(({k,l,icon,border,bg,text}) => {
+      {/* Filters */}
+      <div style={{display:'flex', gap:'5px', marginBottom:'1.25rem', flexWrap:'wrap'}}>
+        {FILTER_OPTS.map(({k,l,border,bg,text,icon}) => {
           const active = filt===k;
           return (
             <button key={k} onClick={()=>onFilt(k)} style={{
               display:'flex', alignItems:'center', gap:'5px',
-              fontSize:'11px', padding:'4px 10px', borderRadius:'12px', cursor:'pointer',
-              border: active ? `1.5px solid ${border||'#1A1916'}` : '1.5px solid transparent',
-              background: active ? (bg||'#1A1916') : '#F5F3EE',
-              color: active ? (text||'#FFFFFF') : '#6B6963',
-              fontWeight: active ? 500 : 400,
+              padding:'5px 11px', borderRadius:'20px', fontFamily:SANS,
+              fontSize:'11px', fontWeight: active?500:400,
+              border: active ? `1.5px solid ${border||C.ink}` : `1px solid ${C.borderLight}`,
+              background: active ? (bg||C.ink) : 'transparent',
+              color: active ? (text||'#fff') : C.inkMid,
             }}>
               {icon && active && <StatusIcon type={icon} color={text} size={11}/>}
               {l}
@@ -568,225 +545,249 @@ function RoomView({ room, items, filt, q, onFilt, onQ, onAdd, onEdit, onCycle })
         })}
       </div>
 
+      {/* Items */}
       {items.length===0 ? (
-        <div style={{textAlign:'center', padding:'2.5rem', color:'#9B9891', fontSize:'13px'}}>
-          {room.items.length===0 ? 'Espacio vacío — agrega el primer ítem.' : 'Sin resultados para este filtro.'}
+        <div style={{textAlign:'center', padding:'3rem', color:C.inkLight, fontFamily:SERIF, fontStyle:'italic', fontSize:'14px'}}>
+          {room.items.length===0 ? 'Espacio vacío — agrega el primer ítem.' : 'Sin resultados.'}
         </div>
       ) : grouped ? (
         Object.entries(grouped).map(([cat, catItems]) => (
-          <div key={cat}>
-            <div style={{display:'flex', alignItems:'center', gap:'6px', padding:'12px 0 5px'}}>
-              <div style={{height:'1px', width:'8px', background:'#D3D1C7'}}/>
-              <span style={{fontSize:'9px', fontWeight:500, color:'#888780', textTransform:'uppercase', letterSpacing:'0.08em', whiteSpace:'nowrap'}}>{cat}</span>
-              <div style={{height:'1px', flex:1, background:'#D3D1C7'}}/>
+          <div key={cat} style={{marginBottom:'8px'}}>
+            <div style={{display:'flex', alignItems:'center', gap:'8px', padding:'14px 0 6px'}}>
+              <span style={{fontSize:'9px', fontWeight:500, color:C.inkLight, textTransform:'uppercase', letterSpacing:'0.1em', whiteSpace:'nowrap', fontFamily:SANS}}>{cat}</span>
+              <div style={{flex:1, height:'1px', background:C.borderLight}}/>
             </div>
-            {catItems.map(it => <ItemRow key={it.id} item={it} onEdit={()=>onEdit(it)} onCycle={()=>onCycle(it.id)} />)}
+            {catItems.map(it => <ItemRow key={it.id} item={it} onEdit={()=>onEdit(it)} onCycle={()=>onCycle(it.id)}/>)}
           </div>
         ))
       ) : (
-        <div style={{display:'flex', flexDirection:'column', gap:'5px'}}>
-          {items.map(it => <ItemRow key={it.id} item={it} onEdit={()=>onEdit(it)} onCycle={()=>onCycle(it.id)} />)}
-        </div>
+        items.map(it => <ItemRow key={it.id} item={it} onEdit={()=>onEdit(it)} onCycle={()=>onCycle(it.id)}/>)
       )}
     </div>
   );
 }
 
+// ── ITEM ROW ──────────────────────────────────────────────────────────────
 function ItemRow({ item, onEdit, onCycle }) {
   const s = STATUS[item.status]||STATUS.quizas;
   const cost = (parseFloat(item.price)||0)*(parseInt(item.qty)||1);
+  const delivLabel = item.delivery ? new Date(item.delivery+'T12:00').toLocaleDateString('es-CL',{day:'numeric',month:'short'}) : null;
 
   return (
     <div style={{
-      background:'#FFFFFF',
-      border:`0.5px solid ${s.border}40`,
+      background:C.surface,
+      border:`1px solid ${C.border}`,
       borderLeft:`3px solid ${s.border}`,
-      borderRadius:'10px',
-      padding:'0.625rem 0.75rem',
-      display:'flex', alignItems:'center', gap:'8px',
-      marginBottom:'4px',
-      transition:'border-color 0.2s',
+      borderRadius:'10px', padding:'10px 12px',
+      display:'flex', alignItems:'center', gap:'10px',
+      marginBottom:'5px',
     }}>
-      <button onClick={onCycle} title="Clic para cambiar estado" style={{
+      {item.imageUrl && (
+        <img src={item.imageUrl} alt="" style={{width:'38px',height:'38px',borderRadius:'6px',objectFit:'cover',flexShrink:0,border:`1px solid ${C.border}`}} onError={e=>e.target.style.display='none'}/>
+      )}
+
+      <button onClick={onCycle} style={{
         display:'flex', alignItems:'center', gap:'5px',
-        padding:'3px 8px 3px 5px', borderRadius:'10px', cursor:'pointer', flexShrink:0,
+        padding:'3px 9px 3px 6px', borderRadius:'20px',
         border:`1px solid ${s.border}60`,
-        background:s.bg, color:s.text, whiteSpace:'nowrap', fontSize:'10px', fontWeight:500,
+        background:s.bg, color:s.text,
+        fontFamily:SANS, fontSize:'10px', fontWeight:500,
+        flexShrink:0, whiteSpace:'nowrap',
       }}>
-        <StatusIcon type={s.icon} color={s.border} size={12}/>
+        <StatusIcon type={s.icon} color={s.border} size={11}/>
         {s.short}
       </button>
 
       <div style={{flex:1, minWidth:0}}>
-        <div style={{fontSize:'13px', fontWeight:500, color:'#1A1916', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
+        <div style={{fontFamily:SANS, fontSize:'13px', fontWeight:500, color:C.ink, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
           {item.name}
-          {item.qty>1 && <span style={{fontWeight:400, color:'#6B6963', fontSize:'12px'}}> ×{item.qty}</span>}
+          {item.qty>1 && <span style={{fontWeight:400, color:C.inkLight, fontSize:'12px'}}> ×{item.qty}</span>}
         </div>
-        {(item.store||item.notes||cost>0||item.delivery) && (
-          <div style={{fontSize:'11px', color:'#6B6963', marginTop:'1px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
-            {[item.store, item.notes, cost>0?`$${Math.round(cost).toLocaleString('es-CL')}`:null, item.delivery ? `📦 ${new Date(item.delivery+'T12:00').toLocaleDateString('es-CL',{day:'numeric',month:'short'})}` : null].filter(Boolean).join(' · ')}
+        {(item.store||cost>0||delivLabel||item.medidas) && (
+          <div style={{fontFamily:SANS, fontSize:'11px', color:C.inkMid, marginTop:'2px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
+            {[item.store, item.medidas, cost>0?`$${Math.round(cost).toLocaleString('es-CL')}`:null, delivLabel?`📦 ${delivLabel}`:null].filter(Boolean).join(' · ')}
           </div>
         )}
       </div>
 
-      <PriorityBars priority={item.priority}/>
 
       {item.url && (
-        <button onClick={()=>window.open(item.url,'_blank')} title="Ver en tienda (link)" style={{
-          display:'flex', alignItems:'center', justifyContent:'center',
-          width:'24px', height:'24px', border:'0.5px solid #E2DFD8',
-          borderRadius:'50%', background:'none', cursor:'pointer', flexShrink:0, color:'#185FA5', fontSize:'11px',
+        <button onClick={()=>window.open(item.url,'_blank')} title="Ver en tienda" style={{
+          width:'26px', height:'26px', display:'flex', alignItems:'center', justifyContent:'center',
+          border:`1px solid ${C.border}`, borderRadius:'50%',
+          background:'none', color:C.sage, fontSize:'12px', flexShrink:0,
         }}>↗</button>
       )}
 
       <button onClick={onEdit} style={{
-        display:'flex', alignItems:'center', justifyContent:'center',
-        width:'24px', height:'24px', border:'0.5px solid #E2DFD8',
-        borderRadius:'50%', background:'none', cursor:'pointer', flexShrink:0, color:'#6B6963',
+        width:'26px', height:'26px', display:'flex', alignItems:'center', justifyContent:'center',
+        border:`1px solid ${C.border}`, borderRadius:'50%',
+        background:'none', color:C.inkLight, flexShrink:0,
       }}>
         <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-          <path d="M8 1.5l1.5 1.5L3 9.5H1.5V8L8 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M7.5 1.5l2 2L3 10H1V8L7.5 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       </button>
     </div>
   );
 }
 
+// ── ITEM FORM ─────────────────────────────────────────────────────────────
+const LBL = {fontFamily:SANS, fontSize:'11px', fontWeight:500, color:C.inkMid, display:'block', marginBottom:'5px', textTransform:'uppercase', letterSpacing:'0.05em'};
+
 function ItemForm({ item, roomName, onSave, onDelete, onCancel }) {
   const [f, setF] = useState({...item});
   const set = (k,v) => setF(p=>({...p,[k]:v}));
   const cost = (parseFloat(f.price)||0)*(parseInt(f.qty)||1);
 
-  function handleSave() {
-    if (!f.name.trim()) return;
-    onSave({...f, qty:parseInt(f.qty)||1});
-  }
-
   return (
-    <div style={{padding:'1.25rem'}}>
-      <div style={{display:'flex', alignItems:'center', gap:'8px', marginBottom:'1.25rem'}}>
-        <button onClick={onCancel} style={{fontSize:'11px', padding:'4px 10px'}}>← Volver</button>
-        <span style={{fontSize:'15px', fontWeight:500}}>{f.id?'Editar ítem':'Nuevo ítem'}</span>
-        <span style={{fontSize:'12px', color:'#6B6963'}}>· {roomName}</span>
+    <div style={{padding:'1.5rem', background:C.cream, minHeight:'100vh'}}>
+      {/* Back nav */}
+      <div style={{display:'flex', alignItems:'center', gap:'10px', marginBottom:'1.5rem'}}>
+        <button onClick={onCancel} style={{
+          padding:'6px 12px', background:C.surface, border:`1px solid ${C.border}`,
+          borderRadius:'8px', fontFamily:SANS, fontSize:'12px', color:C.inkMid,
+        }}>← Volver</button>
+        <div>
+          <span style={{fontFamily:SERIF, fontSize:'18px', fontWeight:500, color:C.ink}}>
+            {f.id ? 'Editar ítem' : 'Nuevo ítem'}
+          </span>
+          <span style={{fontFamily:SANS, fontSize:'12px', color:C.inkLight, marginLeft:'8px'}}>· {roomName}</span>
+        </div>
       </div>
 
-      <div style={{display:'flex', flexDirection:'column', gap:'12px'}}>
-        <div>
-          <label style={LBL}>Nombre *</label>
-          <input value={f.name} onChange={e=>set('name',e.target.value)} placeholder="ej: Sofá de 3 plazas" style={{width:'100%',boxSizing:'border-box'}} />
-        </div>
+      <div style={{background:C.surface, borderRadius:'14px', padding:'1.5rem', border:`1px solid ${C.border}`}}>
+        <div style={{display:'flex', flexDirection:'column', gap:'16px'}}>
 
-        <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px'}}>
+          {/* Name */}
           <div>
-            <label style={LBL}>Cantidad</label>
-            <input type="number" min="1" value={f.qty} onChange={e=>set('qty',e.target.value)} style={{width:'100%',boxSizing:'border-box'}} />
+            <label style={LBL}>Nombre *</label>
+            <input value={f.name} onChange={e=>set('name',e.target.value)}
+              placeholder="ej: Sofá seccional" style={{fontSize:'14px', padding:'10px 12px'}}/>
           </div>
-          <div>
-            <label style={LBL}>Precio unitario (CLP $)</label>
-            <input type="number" min="0" value={f.price} onChange={e=>set('price',e.target.value)} placeholder="0" style={{width:'100%',boxSizing:'border-box'}} />
+
+          {/* Qty + Price */}
+          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px'}}>
+            <div>
+              <label style={LBL}>Cantidad</label>
+              <input type="number" min="1" value={f.qty} onChange={e=>set('qty',e.target.value)}/>
+            </div>
+            <div>
+              <label style={LBL}>Precio unitario (CLP)</label>
+              <input type="number" min="0" value={f.price} onChange={e=>set('price',e.target.value)} placeholder="0"/>
+            </div>
           </div>
-        </div>
 
-        {cost>0 && (
-          <div style={{fontSize:'12px', textAlign:'right', color:'#6B6963'}}>
-            Total: <strong style={{color:'#1A1916', fontSize:'14px'}}>${Math.round(cost).toLocaleString('es-CL')}</strong>
-          </div>
-        )}
-
-        <div>
-          <label style={LBL}>Tienda / Dónde comprar</label>
-          <input value={f.store} onChange={e=>set('store',e.target.value)} placeholder="ej: Falabella, IKEA, Paris, Easy, MercadoLibre…" style={{width:'100%',boxSizing:'border-box'}} />
-        </div>
-
-        <div>
-          <label style={LBL}>Link del producto (URL)</label>
-          <input type="url" value={f.url} onChange={e=>set('url',e.target.value)} placeholder="https://…" style={{width:'100%',boxSizing:'border-box'}} />
-        </div>
-
-        <div>
-          <label style={LBL}>Categoría</label>
-          <input value={f.category} onChange={e=>set('category',e.target.value)} placeholder="ej: Muebles, Textiles, Electrodomésticos…" style={{width:'100%',boxSizing:'border-box'}} />
-        </div>
-
-        <div>
-          <label style={LBL}>Fecha de entrega estimada</label>
-          <input type="date" value={f.delivery||''} onChange={e=>set('delivery',e.target.value)} style={{width:'100%',boxSizing:'border-box'}} />
-        </div>
-
-        <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px'}}>
-          <div>
-            <label style={LBL}>Estado</label>
-            <select value={f.status} onChange={e=>set('status',e.target.value)} style={{width:'100%',boxSizing:'border-box'}}>
-              {Object.entries(STATUS).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
-            </select>
-          </div>
-          <div>
-            <label style={LBL}>Prioridad</label>
-            <select value={f.priority} onChange={e=>set('priority',e.target.value)} style={{width:'100%',boxSizing:'border-box'}}>
-              {Object.entries(PRIORITY).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label style={LBL}>Notas</label>
-          <textarea value={f.notes} onChange={e=>set('notes',e.target.value)} placeholder="Medidas, color, modelo, consideraciones…" rows={3} style={{width:'100%',boxSizing:'border-box',resize:'vertical'}} />
-        </div>
-
-        <div style={{display:'flex', gap:'8px', paddingTop:'4px'}}>
-          <button onClick={handleSave} style={{flex:1, padding:'10px', fontWeight:500}}>
-            {f.id ? 'Guardar cambios' : 'Agregar ítem'}
-          </button>
-          {f.id && (
-            <button onClick={()=>onDelete(f.id)} style={{padding:'10px 16px', color:'#D85A30', border:'0.5px solid #E2DFD8', background:'none', borderRadius:'8px', cursor:'pointer'}}>
-              Eliminar
-            </button>
+          {cost>0 && (
+            <div style={{textAlign:'right', fontFamily:SANS, fontSize:'12px', color:C.inkMid}}>
+              Total: <strong style={{fontFamily:SERIF, fontSize:'15px', color:C.ink}}>${Math.round(cost).toLocaleString('es-CL')}</strong>
+            </div>
           )}
+
+          {/* Medidas */}
+          <div>
+            <label style={LBL}>Medidas</label>
+            <input value={f.medidas||''} onChange={e=>set('medidas',e.target.value)} placeholder="ej: 230×90×80cm"/>
+          </div>
+
+          {/* Store */}
+          <div>
+            <label style={LBL}>Tienda</label>
+            <input value={f.store} onChange={e=>set('store',e.target.value)} placeholder="ej: Fabrics, Pardecosas, IKEA…"/>
+          </div>
+
+          {/* URL */}
+          <div>
+            <label style={LBL}>Link del producto</label>
+            <input type="url" value={f.url} onChange={e=>set('url',e.target.value)} placeholder="https://…"/>
+          </div>
+
+          {/* Image URL */}
+          <div>
+            <label style={LBL}>Imagen del producto (URL)</label>
+            <input type="url" value={f.imageUrl||''} onChange={e=>set('imageUrl',e.target.value)} placeholder="https://… (pega link de la foto)"/>
+            {f.imageUrl && <img src={f.imageUrl} alt="" style={{marginTop:'8px',width:'80px',height:'80px',objectFit:'cover',borderRadius:'8px',border:`1px solid ${C.border}`}} onError={e=>e.target.style.display='none'}/>}
+          </div>
+
+          {/* Delivery */}
+          <div>
+            <label style={LBL}>Fecha de entrega estimada</label>
+            <input type="date" value={f.delivery||''} onChange={e=>set('delivery',e.target.value)}/>
+          </div>
+
+          {/* Status + Priority */}
+          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px'}}>
+            <div>
+              <label style={LBL}>Estado</label>
+              <select value={f.status} onChange={e=>set('status',e.target.value)}>
+                {Object.entries(STATUS).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={LBL}>Prioridad</label>
+              <select value={f.priority} onChange={e=>set('priority',e.target.value)}>
+                {Object.entries(PRIORITY).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label style={LBL}>Notas</label>
+            <textarea value={f.notes} onChange={e=>set('notes',e.target.value)}
+              placeholder="Detalles, consideraciones, recordatorios…"
+              rows={3} style={{resize:'vertical'}}/>
+          </div>
+
+          {/* Actions */}
+          <div style={{display:'flex', gap:'8px', paddingTop:'4px'}}>
+            <button onClick={()=>{if(f.name.trim()) onSave({...f,qty:parseInt(f.qty)||1});}} style={{
+              flex:1, padding:'11px', fontFamily:SANS, fontWeight:500, fontSize:'14px',
+              background:C.terra, color:'#fff', border:'none', borderRadius:'10px',
+            }}>
+              {f.id ? 'Guardar cambios' : 'Agregar ítem'}
+            </button>
+            {f.id && (
+              <button onClick={()=>onDelete(f.id)} style={{
+                padding:'11px 16px', fontFamily:SANS, fontSize:'13px',
+                background:'none', border:`1px solid ${C.border}`, borderRadius:'10px', color:C.terra,
+              }}>Eliminar</button>
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
+// ── BOARD VIEW ────────────────────────────────────────────────────────────
 function BoardView({ rooms, onCycle, onEdit }) {
-  const allItems = rooms.flatMap(r =>
-    r.items.map(it => ({...it, roomId:r.id, roomName:r.name, roomEmoji:r.emoji}))
-  );
+  const allItems = rooms.flatMap(r => r.items.map(it=>({...it, roomId:r.id, roomName:r.name, roomEmoji:r.emoji})));
 
   return (
-    <div style={{padding:'1rem 1.25rem'}}>
-      <div style={{fontSize:'11px', color:'#6B6963', marginBottom:'0.875rem'}}>
-        Vista general · {allItems.length} ítems en {rooms.length} espacios · toca una card para editar
-      </div>
-      <div style={{display:'flex', gap:'10px', overflowX:'auto', alignItems:'flex-start', paddingBottom:'1rem'}}>
+    <div style={{padding:'1.25rem 1.5rem'}}>
+      <p style={{fontFamily:SANS, fontSize:'11px', color:C.inkLight, marginBottom:'1rem', textTransform:'uppercase', letterSpacing:'0.05em'}}>
+        Vista tablero · {allItems.length} ítems · toca para editar
+      </p>
+      <div style={{display:'flex', gap:'12px', overflowX:'auto', alignItems:'flex-start', paddingBottom:'1rem'}}>
         {Object.entries(STATUS).map(([key, s]) => {
-          const colItems = allItems.filter(it => it.status === key);
+          const col = allItems.filter(it=>it.status===key);
           return (
-            <div key={key} style={{flex:'0 0 210px', display:'flex', flexDirection:'column', gap:'5px'}}>
+            <div key={key} style={{flex:'0 0 220px'}}>
               <div style={{
-                display:'flex', alignItems:'center', gap:'6px',
-                padding:'7px 10px', borderRadius:'8px',
-                background:s.bg, border:`1px solid ${s.border}50`,
-                marginBottom:'2px', position:'sticky', top:0,
+                display:'flex', alignItems:'center', gap:'7px',
+                padding:'8px 12px', borderRadius:'10px',
+                background:s.bg, border:`1px solid ${s.border}40`,
+                marginBottom:'8px',
               }}>
                 <StatusIcon type={s.icon} color={s.border} size={13}/>
-                <span style={{fontSize:'12px', fontWeight:500, color:s.text}}>{s.label}</span>
-                <span style={{
-                  marginLeft:'auto', fontSize:'11px', fontWeight:500,
-                  background:s.border, color:'#fff', borderRadius:'10px',
-                  padding:'0px 6px', lineHeight:'18px',
-                }}>{colItems.length}</span>
+                <span style={{fontFamily:SERIF, fontSize:'13px', fontWeight:500, color:s.text, flex:1}}>{s.label}</span>
+                <span style={{fontFamily:SANS, fontSize:'11px', fontWeight:600, color:'#fff', background:s.border, borderRadius:'10px', padding:'1px 7px'}}>{col.length}</span>
               </div>
-              {colItems.length === 0 && (
-                <div style={{
-                  border:`1px dashed ${s.border}50`, borderRadius:'10px',
-                  padding:'1.5rem', textAlign:'center',
-                  fontSize:'11px', color:s.text, opacity:0.5,
-                }}>vacío</div>
+              {col.length===0 && (
+                <div style={{border:`1px dashed ${s.border}50`, borderRadius:'10px', padding:'2rem', textAlign:'center', fontFamily:SERIF, fontStyle:'italic', fontSize:'12px', color:s.border, opacity:.6}}>vacío</div>
               )}
-              {colItems.map(it => (
-                <BoardCard key={it.id} item={it} s={s} onCycle={()=>onCycle(it.id)} onEdit={()=>onEdit(it)}/>
-              ))}
+              {col.map(it => <BoardCard key={it.id} item={it} s={s} onCycle={()=>onCycle(it.id)} onEdit={()=>onEdit(it)}/>)}
             </div>
           );
         })}
@@ -797,53 +798,35 @@ function BoardView({ rooms, onCycle, onEdit }) {
 
 function BoardCard({ item, s, onCycle, onEdit }) {
   const cost = (parseFloat(item.price)||0)*(parseInt(item.qty)||1);
-  const delivLabel = item.delivery
-    ? new Date(item.delivery+'T12:00').toLocaleDateString('es-CL',{day:'numeric',month:'short'})
-    : null;
+  const delivLabel = item.delivery ? new Date(item.delivery+'T12:00').toLocaleDateString('es-CL',{day:'numeric',month:'short'}) : null;
 
   return (
     <div onClick={onEdit} style={{
-      background:'#FFFFFF',
-      border:`0.5px solid ${s.border}35`,
-      borderLeft:`3px solid ${s.border}`,
-      borderRadius:'10px',
-      padding:'0.625rem 0.75rem',
-      cursor:'pointer',
+      background:C.surface, border:`1px solid ${C.border}`,
+      borderLeft:`3px solid ${s.border}`, borderRadius:'10px',
+      padding:'10px 12px', cursor:'pointer', marginBottom:'6px',
     }}>
-      <div style={{display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'6px', marginBottom:'5px'}}>
-        <span style={{fontSize:'12px', fontWeight:500, color:'#1A1916', lineHeight:'1.35', flex:1}}>
-          {item.name}
-          {item.qty>1 && <span style={{fontWeight:400, color:'#6B6963', fontSize:'11px'}}> ×{item.qty}</span>}
+      {item.imageUrl && (
+        <img src={item.imageUrl} alt="" style={{width:'100%',height:'90px',objectFit:'cover',borderRadius:'6px',marginBottom:'8px',border:`1px solid ${C.border}`}} onError={e=>e.target.style.display='none'}/>
+      )}
+      <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:'6px', marginBottom:'6px'}}>
+        <span style={{fontFamily:SANS, fontSize:'12px', fontWeight:500, color:C.ink, lineHeight:1.35, flex:1}}>
+          {item.name}{item.qty>1&&<span style={{color:C.inkLight}}> ×{item.qty}</span>}
         </span>
-        <PriorityBars priority={item.priority}/>
       </div>
-
-      <div style={{display:'flex', alignItems:'center', gap:'4px', flexWrap:'wrap', marginBottom:'6px'}}>
-        <span style={{fontSize:'10px', padding:'1px 7px', borderRadius:'8px', background:'#F1EFE8', color:'#5F5E5A', whiteSpace:'nowrap'}}>
-          {item.roomEmoji} {item.roomName}
-        </span>
-        {cost>0 && (
-          <span style={{fontSize:'10px', color:'#6B6963', fontWeight:500}}>
-            ${Math.round(cost).toLocaleString('es-CL')}
-          </span>
-        )}
-        {delivLabel && (
-          <span style={{fontSize:'10px', color:'#185FA5', background:'#E6F1FB', padding:'1px 6px', borderRadius:'8px', whiteSpace:'nowrap'}}>
-            📦 {delivLabel}
-          </span>
-        )}
+      <div style={{display:'flex', flexWrap:'wrap', gap:'4px', marginBottom:'8px'}}>
+        <span style={{fontFamily:SANS, fontSize:'10px', padding:'2px 7px', borderRadius:'8px', background:C.cream, color:C.inkMid}}>{item.roomEmoji} {item.roomName}</span>
+        {cost>0 && <span style={{fontFamily:SANS, fontSize:'10px', color:C.inkMid, fontWeight:500}}>${Math.round(cost).toLocaleString('es-CL')}</span>}
+        {delivLabel && <span style={{fontFamily:SANS, fontSize:'10px', padding:'2px 7px', borderRadius:'8px', background:C.sageBg, color:C.sageDark}}>📦 {delivLabel}</span>}
       </div>
-
-      <button onClick={e=>{e.stopPropagation(); onCycle();}} style={{
-        display:'flex', alignItems:'center', gap:'4px',
-        padding:'2px 8px 2px 5px', borderRadius:'8px',
-        border:`1px solid ${s.border}60`,
-        background:s.bg, color:s.text,
-        fontSize:'10px', cursor:'pointer', fontWeight:500,
+      <button onClick={e=>{e.stopPropagation();onCycle();}} style={{
+        display:'flex', alignItems:'center', gap:'5px',
+        padding:'3px 9px 3px 6px', borderRadius:'20px',
+        border:`1px solid ${s.border}50`, background:s.bg, color:s.text,
+        fontFamily:SANS, fontSize:'10px', fontWeight:500,
       }}>
         <StatusIcon type={s.icon} color={s.border} size={10}/>
-        {s.short}
-        <span style={{opacity:0.5, fontSize:'9px', marginLeft:'1px'}}>→</span>
+        {s.short} <span style={{opacity:.5}}>→</span>
       </button>
     </div>
   );
