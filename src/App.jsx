@@ -287,15 +287,59 @@ export default function App() {
   const [q, setQ] = useState('');
   const [boardMode, setBoardMode] = useState(false);
 
+  const [syncStatus, setSyncStatus] = useState('idle'); // idle | saving | saved | error
+
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('d504-v7');
-      setRooms(saved ? JSON.parse(saved) : ROOMS0);
-    } catch { setRooms(ROOMS0); }
+    async function load() {
+      try {
+        const url = process.env.REACT_APP_SUPABASE_URL;
+        const key = process.env.REACT_APP_SUPABASE_KEY;
+        const res = await fetch(`${url}/rest/v1/inventory?key=eq.d504`, {
+          headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
+        });
+        const rows = await res.json();
+        if (Array.isArray(rows) && rows.length > 0 && rows[0].data) {
+          setRooms(JSON.parse(rows[0].data));
+          return;
+        }
+      } catch (e) { console.warn('Supabase load failed, using localStorage', e); }
+      try {
+        const saved = localStorage.getItem('d504-v7');
+        setRooms(saved ? JSON.parse(saved) : ROOMS0);
+      } catch { setRooms(ROOMS0); }
+    }
+    load();
   }, []);
 
   useEffect(() => {
-    if (rooms) try { localStorage.setItem('d504-v7', JSON.stringify(rooms)); } catch(e) {}
+    if (!rooms) return;
+    setSyncStatus('saving');
+    const timer = setTimeout(async () => {
+      try {
+        const url = process.env.REACT_APP_SUPABASE_URL;
+        const key = process.env.REACT_APP_SUPABASE_KEY;
+        const res = await fetch(`${url}/rest/v1/inventory`, {
+          method: 'POST',
+          headers: {
+            'apikey': key,
+            'Authorization': `Bearer ${key}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'resolution=merge-duplicates',
+          },
+          body: JSON.stringify({ key: 'd504', data: JSON.stringify(rooms), updated_at: new Date().toISOString() })
+        });
+        if (res.ok || res.status === 201) {
+          setSyncStatus('saved');
+          setTimeout(() => setSyncStatus('idle'), 2500);
+        } else { throw new Error('Save failed'); }
+      } catch (e) {
+        console.warn('Supabase save failed', e);
+        try { localStorage.setItem('d504-v7', JSON.stringify(rooms)); } catch(err) {}
+        setSyncStatus('error');
+        setTimeout(() => setSyncStatus('idle'), 3000);
+      }
+    }, 1500);
+    return () => clearTimeout(timer);
   }, [rooms]);
 
   const room = useMemo(() => rooms?.find(r => r.id === roomId), [rooms, roomId]);
@@ -369,9 +413,14 @@ export default function App() {
       <div style={{background:C.surface, borderBottom:`1px solid ${C.border}`, padding:'1.5rem 1.5rem 1rem'}}>
         <div style={{display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'1.25rem'}}>
           <div>
-            <h1 style={{fontFamily:SERIF, fontSize:'26px', fontWeight:500, margin:'0 0 2px', letterSpacing:'-0.01em', color:C.ink}}>
-              Depto 504
-            </h1>
+            <div style={{display:'flex', alignItems:'center', gap:'8px', marginBottom:'2px'}}>
+              <h1 style={{fontFamily:SERIF, fontSize:'26px', fontWeight:500, margin:0, letterSpacing:'-0.01em', color:C.ink}}>
+                Depto 504
+              </h1>
+              {syncStatus==='saving' && <span style={{fontFamily:SANS, fontSize:'10px', color:C.inkLight, background:C.surfaceAlt, padding:'2px 8px', borderRadius:'10px', letterSpacing:'0.02em'}}>guardando…</span>}
+              {syncStatus==='saved'  && <span style={{fontFamily:SANS, fontSize:'10px', color:C.meadowDark, background:C.meadowBg, padding:'2px 8px', borderRadius:'10px'}}>✓ guardado</span>}
+              {syncStatus==='error'  && <span style={{fontFamily:SANS, fontSize:'10px', color:C.terraDark, background:C.terraBg, padding:'2px 8px', borderRadius:'10px'}}>sin conexión</span>}
+            </div>
             <p style={{fontFamily:SANS, fontSize:'12px', color:C.inkLight, margin:0, letterSpacing:'0.04em', textTransform:'uppercase'}}>
               Jardín del Este · Inventario mudanza
             </p>
